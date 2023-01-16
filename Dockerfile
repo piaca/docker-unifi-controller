@@ -1,38 +1,26 @@
 FROM ghcr.io/linuxserver/baseimage-ubuntu:focal
 
 # set version label
-ARG BUILD_DATE
-ARG VERSION
-ARG UNIFI_VERSION
-LABEL build_version="Linuxserver.io version:- ${VERSION} Build-date:- ${BUILD_DATE}"
 LABEL maintainer="aptalca"
 
 # environment settings
-ARG UNIFI_BRANCH="stable"
 ARG DEBIAN_FRONTEND="noninteractive"
+ARG TZ="Asia/Shanghai"
 
 RUN \
   echo "**** install packages ****" && \
   apt-get update && \
   apt-get install -y \
-    binutils \
-    jsvc \
-    libcap2 \
-    logrotate \
-    mongodb-server \
-    openjdk-11-jre-headless \
+  apt-transport-https \
+    tzdata \
+    curl \
     wget && \
+  echo "**** unifi repo settings ****" && \
+  echo 'deb https://www.ui.com/downloads/unifi/debian stable ubiquiti' | tee /etc/apt/sources.list.d/100-ubnt-unifi.list && \
+  wget -O /etc/apt/trusted.gpg.d/unifi-repo.gpg https://dl.ui.com/unifi/unifi-repo.gpg && \
   echo "**** install unifi ****" && \
-  if [ -z ${UNIFI_VERSION+x} ]; then \
-    UNIFI_VERSION=$(curl -sX GET http://dl-origin.ubnt.com/unifi/debian/dists/${UNIFI_BRANCH}/ubiquiti/binary-amd64/Packages \
-    |grep -A 7 -m 1 'Package: unifi' \
-    | awk -F ': ' '/Version/{print $2;exit}' \
-    | awk -F '-' '{print $1}'); \
-  fi && \
-  mkdir -p /app && \
-  curl -o \
-  /app/unifi.deb -L \
-    "https://dl.ui.com/unifi/${UNIFI_VERSION}/unifi_sysvinit_all.deb" && \
+  apt-get update && \
+  DEBIAN_FRONTEND=noninteractive apt-get install -y unifi && \
   echo "**** cleanup ****" && \
   apt-get clean && \
   rm -rf \
@@ -40,7 +28,7 @@ RUN \
     /var/lib/apt/lists/* \
     /var/tmp/*
 
-# add local files
+#add local files
 COPY root/ /
 
 # Volumes and Ports
